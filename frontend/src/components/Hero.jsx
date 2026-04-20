@@ -35,8 +35,9 @@ export default function Hero({ items = [] }) {
         >
           {it.backdrop_path && (
             <img
-              src={img(it.backdrop_path, "original")}
+              src={img(it.backdrop_path, "w1280")}
               alt={it.title || it.name}
+              loading={i === 0 ? "eager" : "lazy"}
               className="w-full h-full object-cover"
             />
           )}

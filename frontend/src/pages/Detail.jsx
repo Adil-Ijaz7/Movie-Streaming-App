@@ -99,6 +99,83 @@ export default function Detail({ type }) {
     (data?.episode_run_time && data.episode_run_time[0]) ||
     null;
 
+  // Isolate the player: when playing, don't render heavy Detail content
+  // (backdrop image, episode stills, similar carousel). This avoids
+  // network + CPU contention with the video stream → much less lag.
+  if (playing) {
+    return (
+      <div className="fixed inset-0 z-[100] bg-black flex flex-col">
+        <div className="flex items-center justify-between px-4 md:px-6 h-14 bg-black/90 border-b border-white/10 gap-3">
+          <div className="text-white font-semibold truncate flex-1 min-w-0">
+            {title || "Loading..."}{" "}
+            {type === "tv" ? `• S${season} E${episode}` : ""}
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <Server size={14} className="hidden md:block text-white/60" />
+            <select
+              value={server}
+              onChange={(e) => changeServer(e.target.value)}
+              className="bg-white/10 hover:bg-white/15 border border-white/15 text-white text-sm rounded-md px-2.5 py-1.5 focus:outline-none focus:border-[#7c3aed] cursor-pointer"
+              aria-label="Streaming server"
+            >
+              {SERVERS.map((s) => (
+                <option key={s.id} value={s.id} className="bg-[#0a0a14]">
+                  {s.name}
+                </option>
+              ))}
+            </select>
+            <Globe size={14} className="hidden md:block text-white/60 ml-1" />
+            <select
+              value={lang}
+              onChange={(e) => changeLang(e.target.value)}
+              className="bg-white/10 hover:bg-white/15 border border-white/15 text-white text-sm rounded-md px-2.5 py-1.5 focus:outline-none focus:border-[#7c3aed] cursor-pointer"
+              aria-label="Audio language"
+            >
+              {LANGUAGES.map((l) => (
+                <option key={l.code} value={l.code} className="bg-[#0a0a14]">
+                  {l.label}
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={() => setParams({})}
+              className="text-white/80 hover:text-white ml-1"
+              aria-label="Close player"
+            >
+              <X size={24} />
+            </button>
+          </div>
+        </div>
+        <div className="flex-1 bg-black relative">
+          <iframe
+            key={iframeKey}
+            title="player"
+            src={
+              type === "tv"
+                ? playerUrl.tv(id, season, episode, lang, server)
+                : playerUrl.movie(id, lang, server)
+            }
+            className="w-full h-full block"
+            allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
+            allowFullScreen
+            referrerPolicy="no-referrer"
+            frameBorder="0"
+            loading="eager"
+          />
+          {lang === "hi" && (
+            <div className="absolute top-3 left-1/2 -translate-x-1/2 max-w-[90%] bg-black/85 backdrop-blur text-white/95 text-xs md:text-sm px-4 py-2 rounded-full border border-white/15 pointer-events-none flex items-center gap-2 shadow-lg">
+              <Info size={14} className="shrink-0 text-purple-300" />
+              <span>
+                Hindi selected — open the player's <b>audio menu</b> (gear /
+                CC icon) to pick Hindi. Try another <b>Server</b> if not listed.
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#0a0a14] text-white">
       <Navbar />
@@ -108,8 +185,9 @@ export default function Detail({ type }) {
           <div className="relative h-[70vh] min-h-[500px] overflow-hidden">
             {data.backdrop_path && (
               <img
-                src={img(data.backdrop_path, "original")}
+                src={img(data.backdrop_path, "w1280")}
                 alt={title}
+                loading="eager"
                 className="w-full h-full object-cover"
               />
             )}
@@ -277,80 +355,6 @@ export default function Detail({ type }) {
               <MediaRow title="More Like This" items={similar} />
             </div>
           )}
-        </div>
-      )}
-
-      {playing && (
-        <div className="fixed inset-0 z-[60] bg-black flex flex-col">
-          <div className="flex items-center justify-between px-4 md:px-6 h-14 bg-black/80 border-b border-white/10 gap-3">
-            <div className="text-white font-semibold truncate flex-1 min-w-0">
-              {title} {type === "tv" ? `• S${season} E${episode}` : ""}
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <div className="hidden md:flex items-center gap-1.5 text-white/60 text-xs">
-                <Server size={14} />
-              </div>
-              <select
-                value={server}
-                onChange={(e) => changeServer(e.target.value)}
-                className="bg-white/10 hover:bg-white/15 border border-white/15 text-white text-sm rounded-md px-2.5 py-1.5 focus:outline-none focus:border-[#7c3aed] cursor-pointer"
-                aria-label="Streaming server"
-              >
-                {SERVERS.map((s) => (
-                  <option key={s.id} value={s.id} className="bg-[#0a0a14]">
-                    {s.name}
-                  </option>
-                ))}
-              </select>
-              <div className="hidden md:flex items-center gap-1.5 text-white/60 text-xs ml-1">
-                <Globe size={14} />
-              </div>
-              <select
-                value={lang}
-                onChange={(e) => changeLang(e.target.value)}
-                className="bg-white/10 hover:bg-white/15 border border-white/15 text-white text-sm rounded-md px-2.5 py-1.5 focus:outline-none focus:border-[#7c3aed] cursor-pointer"
-                aria-label="Audio language"
-              >
-                {LANGUAGES.map((l) => (
-                  <option key={l.code} value={l.code} className="bg-[#0a0a14]">
-                    {l.label}
-                  </option>
-                ))}
-              </select>
-              <button
-                onClick={() => setParams({})}
-                className="text-white/80 hover:text-white ml-1"
-                aria-label="Close player"
-              >
-                <X size={24} />
-              </button>
-            </div>
-          </div>
-          <div className="flex-1 bg-black relative">
-            <iframe
-              key={iframeKey}
-              title="player"
-              src={
-                type === "tv"
-                  ? playerUrl.tv(id, season, episode, lang, server)
-                  : playerUrl.movie(id, lang, server)
-              }
-              className="w-full h-full"
-              allow="autoplay; fullscreen; picture-in-picture"
-              allowFullScreen
-              referrerPolicy="no-referrer"
-              frameBorder="0"
-            />
-            {lang === "hi" && (
-              <div className="absolute top-3 left-1/2 -translate-x-1/2 max-w-[90%] bg-black/85 backdrop-blur text-white/95 text-xs md:text-sm px-4 py-2 rounded-full border border-white/15 pointer-events-none flex items-center gap-2 shadow-lg">
-                <Info size={14} className="shrink-0 text-purple-300" />
-                <span>
-                  Hindi selected — open the player's <b>audio menu</b> (gear /
-                  CC icon) to pick Hindi. Try another <b>Server</b> if not listed.
-                </span>
-              </div>
-            )}
-          </div>
         </div>
       )}
 
