@@ -1,0 +1,84 @@
+import axios from "axios";
+
+const TMDB_KEYS = [
+  "c8dea14dc917687ac631a52620e4f7ad",
+  "3cb41ecea3bf606c56552db3d17adefd",
+];
+let keyIndex = 0;
+const getKey = () => TMDB_KEYS[keyIndex % TMDB_KEYS.length];
+const rotateKey = () => {
+  keyIndex += 1;
+};
+
+const BASE = "https://api.themoviedb.org/3";
+export const IMG = "https://image.tmdb.org/t/p";
+export const img = (path, size = "w500") =>
+  path ? `${IMG}/${size}${path}` : null;
+
+async function tmdbGet(path, params = {}) {
+  let attempts = 0;
+  let lastErr = null;
+  while (attempts < TMDB_KEYS.length) {
+    try {
+      const res = await axios.get(`${BASE}${path}`, {
+        params: { api_key: getKey(), ...params },
+      });
+      return res.data;
+    } catch (e) {
+      lastErr = e;
+      rotateKey();
+      attempts += 1;
+    }
+  }
+  throw lastErr;
+}
+
+// HBO / Max related networks on TMDB
+// 49 = HBO, 3186 = Max, 2552 = HBO Max (legacy), 213 = Netflix (for comparison)
+export const NETWORKS = {
+  HBO: 49,
+  MAX: 3186,
+  HBO_MAX: 2552,
+};
+
+export const tmdb = {
+  trending: (type = "all", window = "week") =>
+    tmdbGet(`/trending/${type}/${window}`),
+  popularMovies: () => tmdbGet("/movie/popular"),
+  topMovies: () => tmdbGet("/movie/top_rated"),
+  upcomingMovies: () => tmdbGet("/movie/upcoming"),
+  popularTv: () => tmdbGet("/tv/popular"),
+  topTv: () => tmdbGet("/tv/top_rated"),
+  hboMovies: () =>
+    tmdbGet("/discover/movie", {
+      with_networks: `${NETWORKS.HBO}|${NETWORKS.MAX}|${NETWORKS.HBO_MAX}`,
+      sort_by: "popularity.desc",
+    }),
+  hboTv: () =>
+    tmdbGet("/discover/tv", {
+      with_networks: `${NETWORKS.HBO}|${NETWORKS.MAX}|${NETWORKS.HBO_MAX}`,
+      sort_by: "popularity.desc",
+    }),
+  hboTvTop: () =>
+    tmdbGet("/discover/tv", {
+      with_networks: `${NETWORKS.HBO}|${NETWORKS.MAX}|${NETWORKS.HBO_MAX}`,
+      sort_by: "vote_average.desc",
+      "vote_count.gte": 200,
+    }),
+  movieDetail: (id) =>
+    tmdbGet(`/movie/${id}`, { append_to_response: "videos,credits,similar,images" }),
+  tvDetail: (id) =>
+    tmdbGet(`/tv/${id}`, { append_to_response: "videos,credits,similar,images" }),
+  seasonDetail: (id, season) => tmdbGet(`/tv/${id}/season/${season}`),
+  searchMulti: (query) => tmdbGet("/search/multi", { query }),
+  discoverMovies: (params = {}) => tmdbGet("/discover/movie", params),
+  discoverTv: (params = {}) => tmdbGet("/discover/tv", params),
+  genreMovies: () => tmdbGet("/genre/movie/list"),
+  genreTv: () => tmdbGet("/genre/tv/list"),
+};
+
+export const playerUrl = {
+  movie: (id) => `https://111movies.net/movie/${id}`,
+  tv: (id, season = 1, episode = 1) =>
+    `https://111movies.net/tv/${id}/${season}/${episode}`,
+};
