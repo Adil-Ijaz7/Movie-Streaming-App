@@ -88,16 +88,55 @@ export const tmdb = {
     }),
 };
 
-export const playerUrl = {
-  movie: (id, lang) => {
-    const base = `https://111movies.net/movie/${id}`;
-    if (!lang || lang === "en") return base;
-    // 111movies + most embed providers accept lang query; pass multiple common keys
-    return `${base}?lang=${lang}&dub=${lang}&audio=${lang}`;
+// Embed server providers. Different scrapers carry different audio tracks
+// (including Hindi dubs), so exposing a Server selector lets users find one.
+// Some providers accept a language hint query param; we pass it when supported.
+export const SERVERS = [
+  {
+    id: "111movies",
+    name: "Server 1 (111movies)",
+    movie: (id) => `https://111movies.net/movie/${id}`,
+    tv: (id, s, e) => `https://111movies.net/tv/${id}/${s}/${e}`,
   },
-  tv: (id, season = 1, episode = 1, lang) => {
-    const base = `https://111movies.net/tv/${id}/${season}/${episode}`;
-    if (!lang || lang === "en") return base;
-    return `${base}?lang=${lang}&dub=${lang}&audio=${lang}`;
+  {
+    id: "vidsrc",
+    name: "Server 2 (VidSrc)",
+    // vidsrc.xyz accepts ds_lang for default subtitle; audio track lives in-player
+    movie: (id, lang) =>
+      `https://vidsrc.xyz/embed/movie?tmdb=${id}${lang ? `&ds_lang=${lang}` : ""}`,
+    tv: (id, s, e, lang) =>
+      `https://vidsrc.xyz/embed/tv?tmdb=${id}&season=${s}&episode=${e}${lang ? `&ds_lang=${lang}` : ""}`,
+  },
+  {
+    id: "vidlink",
+    name: "Server 3 (VidLink)",
+    movie: (id) => `https://vidlink.pro/movie/${id}?autoplay=true`,
+    tv: (id, s, e) => `https://vidlink.pro/tv/${id}/${s}/${e}?autoplay=true`,
+  },
+  {
+    id: "2embed",
+    name: "Server 4 (2Embed)",
+    movie: (id) => `https://www.2embed.cc/embed/${id}`,
+    tv: (id, s, e) => `https://www.2embed.cc/embedtv/${id}&s=${s}&e=${e}`,
+  },
+  {
+    id: "videasy",
+    name: "Server 5 (Videasy)",
+    movie: (id) => `https://player.videasy.net/movie/${id}`,
+    tv: (id, s, e) => `https://player.videasy.net/tv/${id}/${s}/${e}`,
+  },
+];
+
+export const getServer = (serverId) =>
+  SERVERS.find((s) => s.id === serverId) || SERVERS[0];
+
+export const playerUrl = {
+  movie: (id, lang, serverId = "111movies") => {
+    const s = getServer(serverId);
+    return s.movie(id, lang);
+  },
+  tv: (id, season = 1, episode = 1, lang, serverId = "111movies") => {
+    const s = getServer(serverId);
+    return s.tv(id, season, episode, lang);
   },
 };

@@ -1,10 +1,21 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useParams, useSearchParams, useNavigate } from "react-router-dom";
-import { Play, Plus, Check, X, Star, Calendar, Clock, Globe } from "lucide-react";
+import {
+  Play,
+  Plus,
+  Check,
+  X,
+  Star,
+  Calendar,
+  Clock,
+  Globe,
+  Server,
+  Info,
+} from "lucide-react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import MediaRow from "../components/MediaRow";
-import { tmdb, img, playerUrl } from "../lib/tmdb";
+import { tmdb, img, playerUrl, SERVERS } from "../lib/tmdb";
 import { useAuth } from "../context/AuthContext";
 
 const LANGUAGES = [
@@ -14,6 +25,7 @@ const LANGUAGES = [
   { code: "fr", label: "Français", short: "FR" },
 ];
 const LANG_KEY = "max_lang";
+const SERVER_KEY = "max_server";
 
 export default function Detail({ type }) {
   const { id } = useParams();
@@ -24,6 +36,9 @@ export default function Detail({ type }) {
   const [episode, setEpisode] = useState(1);
   const [episodes, setEpisodes] = useState([]);
   const [lang, setLang] = useState(() => localStorage.getItem(LANG_KEY) || "en");
+  const [server, setServer] = useState(
+    () => localStorage.getItem(SERVER_KEY) || "111movies"
+  );
   const [iframeKey, setIframeKey] = useState(0);
   const { inWatchlist, toggleWatchlist } = useAuth();
 
@@ -32,7 +47,12 @@ export default function Detail({ type }) {
   const changeLang = (code) => {
     setLang(code);
     localStorage.setItem(LANG_KEY, code);
-    setIframeKey((k) => k + 1); // force iframe reload with new param
+    setIframeKey((k) => k + 1);
+  };
+  const changeServer = (id) => {
+    setServer(id);
+    localStorage.setItem(SERVER_KEY, id);
+    setIframeKey((k) => k + 1);
   };
 
   useEffect(() => {
@@ -266,9 +286,24 @@ export default function Detail({ type }) {
             <div className="text-white font-semibold truncate flex-1 min-w-0">
               {title} {type === "tv" ? `• S${season} E${episode}` : ""}
             </div>
-            <div className="flex items-center gap-3 shrink-0">
-              <div className="hidden sm:flex items-center gap-1.5 text-white/60 text-xs">
-                <Globe size={14} /> Audio
+            <div className="flex items-center gap-2 shrink-0">
+              <div className="hidden md:flex items-center gap-1.5 text-white/60 text-xs">
+                <Server size={14} />
+              </div>
+              <select
+                value={server}
+                onChange={(e) => changeServer(e.target.value)}
+                className="bg-white/10 hover:bg-white/15 border border-white/15 text-white text-sm rounded-md px-2.5 py-1.5 focus:outline-none focus:border-[#7c3aed] cursor-pointer"
+                aria-label="Streaming server"
+              >
+                {SERVERS.map((s) => (
+                  <option key={s.id} value={s.id} className="bg-[#0a0a14]">
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+              <div className="hidden md:flex items-center gap-1.5 text-white/60 text-xs ml-1">
+                <Globe size={14} />
               </div>
               <select
                 value={lang}
@@ -284,7 +319,7 @@ export default function Detail({ type }) {
               </select>
               <button
                 onClick={() => setParams({})}
-                className="text-white/80 hover:text-white"
+                className="text-white/80 hover:text-white ml-1"
                 aria-label="Close player"
               >
                 <X size={24} />
@@ -297,17 +332,22 @@ export default function Detail({ type }) {
               title="player"
               src={
                 type === "tv"
-                  ? playerUrl.tv(id, season, episode, lang)
-                  : playerUrl.movie(id, lang)
+                  ? playerUrl.tv(id, season, episode, lang, server)
+                  : playerUrl.movie(id, lang, server)
               }
               className="w-full h-full"
               allow="autoplay; fullscreen; picture-in-picture"
               allowFullScreen
+              referrerPolicy="no-referrer"
               frameBorder="0"
             />
             {lang === "hi" && (
-              <div className="absolute top-3 left-1/2 -translate-x-1/2 bg-black/70 backdrop-blur text-white/90 text-xs px-3 py-1.5 rounded-full border border-white/10 pointer-events-none">
-                Hindi dub selected — if unavailable, use player's audio menu
+              <div className="absolute top-3 left-1/2 -translate-x-1/2 max-w-[90%] bg-black/85 backdrop-blur text-white/95 text-xs md:text-sm px-4 py-2 rounded-full border border-white/15 pointer-events-none flex items-center gap-2 shadow-lg">
+                <Info size={14} className="shrink-0 text-purple-300" />
+                <span>
+                  Hindi selected — open the player's <b>audio menu</b> (gear /
+                  CC icon) to pick Hindi. Try another <b>Server</b> if not listed.
+                </span>
               </div>
             )}
           </div>
