@@ -15,17 +15,21 @@ export default function Home() {
   const [popularMovies, setPopularMovies] = useState([]);
   const [topTv, setTopTv] = useState([]);
   const [upcoming, setUpcoming] = useState([]);
+  const [bollywood, setBollywood] = useState([]);
+  const [hindiTv, setHindiTv] = useState([]);
 
   useEffect(() => {
     (async () => {
       try {
-        const [tr, ht, hm, pm, tt, up] = await Promise.all([
+        const [tr, ht, hm, pm, tt, up, bw, htv] = await Promise.all([
           tmdb.trending("all", "week"),
           tmdb.hboTv(),
           tmdb.hboMovies(),
           tmdb.popularMovies(),
           tmdb.hboTvTop(),
           tmdb.upcomingMovies(),
+          tmdb.hindiMovies(),
+          tmdb.hindiTv(),
         ]);
         setTrending(tr.results || []);
         setHboTv(withType((ht.results || []).filter((x) => x.backdrop_path), "tv"));
@@ -33,6 +37,8 @@ export default function Home() {
         setPopularMovies(withType(pm.results || [], "movie"));
         setTopTv(withType(tt.results || [], "tv"));
         setUpcoming(withType(up.results || [], "movie"));
+        setBollywood(withType((bw.results || []).filter((x) => x.poster_path), "movie"));
+        setHindiTv(withType((htv.results || []).filter((x) => x.poster_path), "tv"));
       } catch (e) {
         console.error(e);
       }
@@ -48,8 +54,10 @@ export default function Home() {
       <main className="relative z-10 -mt-20 pb-8">
         <MediaRow title="HBO Originals" items={hboTv} variant="backdrop" />
         <MediaRow title="Trending Now" items={trending} />
+        <MediaRow title="Bollywood & Hindi Cinema" items={bollywood} />
         <MediaRow title="Max Movies" items={hboMovies} />
         <MediaRow title="Top-Rated on Max" items={topTv} />
+        <MediaRow title="Hindi Series" items={hindiTv} />
         <MediaRow title="Popular Movies" items={popularMovies} />
         <MediaRow title="Coming Soon" items={upcoming} variant="backdrop" />
       </main>

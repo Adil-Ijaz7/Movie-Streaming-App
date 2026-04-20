@@ -1,11 +1,19 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useParams, useSearchParams, useNavigate } from "react-router-dom";
-import { Play, Plus, Check, X, Star, Calendar, Clock } from "lucide-react";
+import { Play, Plus, Check, X, Star, Calendar, Clock, Globe } from "lucide-react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import MediaRow from "../components/MediaRow";
 import { tmdb, img, playerUrl } from "../lib/tmdb";
 import { useAuth } from "../context/AuthContext";
+
+const LANGUAGES = [
+  { code: "en", label: "English", short: "EN" },
+  { code: "hi", label: "हिन्दी (Hindi)", short: "HI" },
+  { code: "es", label: "Español", short: "ES" },
+  { code: "fr", label: "Français", short: "FR" },
+];
+const LANG_KEY = "max_lang";
 
 export default function Detail({ type }) {
   const { id } = useParams();
@@ -15,9 +23,17 @@ export default function Detail({ type }) {
   const [season, setSeason] = useState(1);
   const [episode, setEpisode] = useState(1);
   const [episodes, setEpisodes] = useState([]);
+  const [lang, setLang] = useState(() => localStorage.getItem(LANG_KEY) || "en");
+  const [iframeKey, setIframeKey] = useState(0);
   const { inWatchlist, toggleWatchlist } = useAuth();
 
   const playing = params.get("play") === "1";
+
+  const changeLang = (code) => {
+    setLang(code);
+    localStorage.setItem(LANG_KEY, code);
+    setIframeKey((k) => k + 1); // force iframe reload with new param
+  };
 
   useEffect(() => {
     (async () => {
@@ -144,6 +160,21 @@ export default function Detail({ type }) {
                     {added ? <Check size={18} /> : <Plus size={18} />}
                     {added ? "On My List" : "Add to My List"}
                   </button>
+                  <div className="inline-flex items-center gap-2 bg-white/5 border border-white/15 rounded-md px-3 py-3">
+                    <Globe size={16} className="text-white/60" />
+                    <select
+                      value={lang}
+                      onChange={(e) => changeLang(e.target.value)}
+                      className="bg-transparent text-white text-sm focus:outline-none cursor-pointer"
+                      aria-label="Audio language"
+                    >
+                      {LANGUAGES.map((l) => (
+                        <option key={l.code} value={l.code} className="bg-[#0a0a14]">
+                          {l.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
 
                 {cast.length > 0 && (
@@ -231,31 +262,54 @@ export default function Detail({ type }) {
 
       {playing && (
         <div className="fixed inset-0 z-[60] bg-black flex flex-col">
-          <div className="flex items-center justify-between px-4 md:px-6 h-14 bg-black/80 border-b border-white/10">
-            <div className="text-white font-semibold truncate">
+          <div className="flex items-center justify-between px-4 md:px-6 h-14 bg-black/80 border-b border-white/10 gap-3">
+            <div className="text-white font-semibold truncate flex-1 min-w-0">
               {title} {type === "tv" ? `• S${season} E${episode}` : ""}
             </div>
-            <button
-              onClick={() => setParams({})}
-              className="text-white/80 hover:text-white"
-              aria-label="Close player"
-            >
-              <X size={24} />
-            </button>
+            <div className="flex items-center gap-3 shrink-0">
+              <div className="hidden sm:flex items-center gap-1.5 text-white/60 text-xs">
+                <Globe size={14} /> Audio
+              </div>
+              <select
+                value={lang}
+                onChange={(e) => changeLang(e.target.value)}
+                className="bg-white/10 hover:bg-white/15 border border-white/15 text-white text-sm rounded-md px-2.5 py-1.5 focus:outline-none focus:border-[#7c3aed] cursor-pointer"
+                aria-label="Audio language"
+              >
+                {LANGUAGES.map((l) => (
+                  <option key={l.code} value={l.code} className="bg-[#0a0a14]">
+                    {l.label}
+                  </option>
+                ))}
+              </select>
+              <button
+                onClick={() => setParams({})}
+                className="text-white/80 hover:text-white"
+                aria-label="Close player"
+              >
+                <X size={24} />
+              </button>
+            </div>
           </div>
-          <div className="flex-1 bg-black">
+          <div className="flex-1 bg-black relative">
             <iframe
+              key={iframeKey}
               title="player"
               src={
                 type === "tv"
-                  ? playerUrl.tv(id, season, episode)
-                  : playerUrl.movie(id)
+                  ? playerUrl.tv(id, season, episode, lang)
+                  : playerUrl.movie(id, lang)
               }
               className="w-full h-full"
               allow="autoplay; fullscreen; picture-in-picture"
               allowFullScreen
               frameBorder="0"
             />
+            {lang === "hi" && (
+              <div className="absolute top-3 left-1/2 -translate-x-1/2 bg-black/70 backdrop-blur text-white/90 text-xs px-3 py-1.5 rounded-full border border-white/10 pointer-events-none">
+                Hindi dub selected — if unavailable, use player's audio menu
+              </div>
+            )}
           </div>
         </div>
       )}

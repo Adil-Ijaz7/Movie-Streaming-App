@@ -75,10 +75,29 @@ export const tmdb = {
   discoverTv: (params = {}) => tmdbGet("/discover/tv", params),
   genreMovies: () => tmdbGet("/genre/movie/list"),
   genreTv: () => tmdbGet("/genre/tv/list"),
+  hindiMovies: () =>
+    tmdbGet("/discover/movie", {
+      with_original_language: "hi",
+      sort_by: "popularity.desc",
+      "vote_count.gte": 50,
+    }),
+  hindiTv: () =>
+    tmdbGet("/discover/tv", {
+      with_original_language: "hi",
+      sort_by: "popularity.desc",
+    }),
 };
 
 export const playerUrl = {
-  movie: (id) => `https://111movies.net/movie/${id}`,
-  tv: (id, season = 1, episode = 1) =>
-    `https://111movies.net/tv/${id}/${season}/${episode}`,
+  movie: (id, lang) => {
+    const base = `https://111movies.net/movie/${id}`;
+    if (!lang || lang === "en") return base;
+    // 111movies + most embed providers accept lang query; pass multiple common keys
+    return `${base}?lang=${lang}&dub=${lang}&audio=${lang}`;
+  },
+  tv: (id, season = 1, episode = 1, lang) => {
+    const base = `https://111movies.net/tv/${id}/${season}/${episode}`;
+    if (!lang || lang === "en") return base;
+    return `${base}?lang=${lang}&dub=${lang}&audio=${lang}`;
+  },
 };
